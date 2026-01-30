@@ -424,6 +424,90 @@ pub struct SheetStyles {
     pub end: (u32, u32),
 }
 
+/// A hashable key for style deduplication (converts f64 to bits for hashing)
+#[derive(PartialEq, Eq, Hash)]
+struct StyleKey {
+    font_name: Option<String>,
+    font_size_bits: Option<u64>,
+    font_bold: bool,
+    font_italic: bool,
+    font_underline: String,
+    font_strikethrough: bool,
+    font_color: Option<(u8, u8, u8, u8)>,
+    fill_pattern: String,
+    fill_fg: Option<(u8, u8, u8, u8)>,
+    fill_bg: Option<(u8, u8, u8, u8)>,
+    borders: Option<(String, String, String, String, String, String)>, // left, right, top, bottom, diag_down, diag_up styles
+    alignment: Option<(String, String, bool, Option<u64>, Option<u64>, bool)>, // h, v, wrap, rotation_bits, indent_bits, shrink
+    number_format: Option<(String, Option<u32>)>,
+    protection: Option<(bool, bool)>,
+}
+
+impl StyleKey {
+    fn from_calamine(s: &CalStyle) -> Self {
+        let font_color = s.font.as_ref().and_then(|f| {
+            f.color.as_ref().map(|c| (c.alpha, c.red, c.green, c.blue))
+        });
+
+        let (fill_pattern, fill_fg, fill_bg) = s.fill.as_ref().map(|f| {
+            let pattern = format!("{:?}", f.pattern);
+            let fg = f.foreground_color.as_ref().map(|c| (c.alpha, c.red, c.green, c.blue));
+            let bg = f.background_color.as_ref().map(|c| (c.alpha, c.red, c.green, c.blue));
+            (pattern, fg, bg)
+        }).unwrap_or_else(|| (String::new(), None, None));
+
+        let borders = s.borders.as_ref().map(|b| {
+            (
+                format!("{:?}", b.left.style),
+                format!("{:?}", b.right.style),
+                format!("{:?}", b.top.style),
+                format!("{:?}", b.bottom.style),
+                format!("{:?}", b.diagonal_down.style),
+                format!("{:?}", b.diagonal_up.style),
+            )
+        });
+
+        let alignment = s.alignment.as_ref().map(|a| {
+            let rotation_bits = match a.text_rotation {
+                CalTextRotation::None => None,
+                CalTextRotation::Degrees(n) => Some((n as f64).to_bits()),
+                CalTextRotation::Stacked => Some(255f64.to_bits()),
+            };
+            (
+                format!("{:?}", a.horizontal),
+                format!("{:?}", a.vertical),
+                a.wrap_text,
+                rotation_bits,
+                a.indent.map(|i| (i as f64).to_bits()),
+                a.shrink_to_fit,
+            )
+        });
+
+        let number_format = s.number_format.as_ref().map(|n| {
+            (n.format_code.clone(), n.format_id)
+        });
+
+        let protection = s.protection.as_ref().map(|p| (p.locked, p.hidden));
+
+        Self {
+            font_name: s.font.as_ref().and_then(|f| f.name.clone()),
+            font_size_bits: s.font.as_ref().and_then(|f| f.size.map(|sz| sz.to_bits())),
+            font_bold: s.font.as_ref().map(|f| f.weight == CalFontWeight::Bold).unwrap_or(false),
+            font_italic: s.font.as_ref().map(|f| f.style == CalFontStyle::Italic).unwrap_or(false),
+            font_underline: s.font.as_ref().map(|f| format!("{:?}", f.underline)).unwrap_or_default(),
+            font_strikethrough: s.font.as_ref().map(|f| f.strikethrough).unwrap_or(false),
+            font_color,
+            fill_pattern,
+            fill_fg,
+            fill_bg,
+            borders,
+            alignment,
+            number_format,
+            protection,
+        }
+    }
+}
+
 impl SheetStyles {
     pub fn from_calamine(style_range: &CalStyleRange) -> Self {
         let (start, end) = match (style_range.start(), style_range.end()) {
@@ -438,17 +522,15 @@ impl SheetStyles {
         let mut style_ids: Vec<Vec<u32>> = vec![vec![0u32; width]; height];
         let mut palette: HashMap<u32, Style> = HashMap::new();
 
-        // Use pointer address as key for O(1) deduplication
-        // Calamine's StyleRange already deduplicates styles in its internal palette,
-        // so styles with the same pointer are guaranteed to be identical
-        let mut ptr_to_id: HashMap<*const CalStyle, u32> = HashMap::new();
+        // O(1) content-based deduplication using a hashable key
+        let mut key_to_id: HashMap<StyleKey, u32> = HashMap::new();
         let mut next_id: u32 = 0;
 
         // Use calamine's cells() iterator which handles RLE decompression
         for (row, col, cal_style) in style_range.cells() {
-            let ptr = cal_style as *const CalStyle;
+            let key = StyleKey::from_calamine(cal_style);
 
-            let id = *ptr_to_id.entry(ptr).or_insert_with(|| {
+            let id = *key_to_id.entry(key).or_insert_with(|| {
                 let id = next_id;
                 next_id += 1;
                 palette.insert(id, Style::from(cal_style));
