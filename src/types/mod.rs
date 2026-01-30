@@ -14,6 +14,6 @@ pub use excelsheet::{
 pub use exceltable::ExcelTable;
 pub use idx_or_name::IdxOrName;
 pub use style::{
-    Alignment, BorderStyle, Borders, Color, ColumnWidth, Fill, Font, NumberFormat, Protection,
-    RowHeight, SheetLayout, SheetStyles, Style,
+    Alignment, BorderStyle, Borders, Color, ColumnWidth, Fill, Font, MergedCell, NumberFormat,
+    Protection, RowHeight, SheetLayout, SheetStyles, Style,
 };

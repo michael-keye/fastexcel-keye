@@ -67,8 +67,8 @@ fn get_python_version() -> String {
 fn _fastexcel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     use crate::types::excelsheet::column_info::{ColumnInfo, ColumnInfoNoDtype};
     use crate::types::style::{
-        Alignment, BorderStyle, Borders, Color, ColumnWidth, Fill, Font, NumberFormat, Protection,
-        RowHeight, SheetLayout, Style,
+        Alignment, BorderStyle, Borders, Color, ColumnWidth, Fill, Font, MergedCell, NumberFormat,
+        Protection, RowHeight, SheetLayout, Style,
     };
 
     pyo3_log::init();
@@ -97,6 +97,8 @@ fn _fastexcel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<SheetLayout>()?;
     m.add_class::<ColumnWidth>()?;
     m.add_class::<RowHeight>()?;
+    // Merged cells
+    m.add_class::<MergedCell>()?;
     m.add("__version__", get_python_version())?;
 
     // errors

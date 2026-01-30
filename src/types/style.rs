@@ -596,3 +596,60 @@ impl From<&CalWorksheetLayout> for SheetLayout {
         }
     }
 }
+
+// ============================================================================
+// Merged cells
+// ============================================================================
+
+use calamine::Dimensions as CalDimensions;
+
+/// A merged cell region
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "python", pyclass(name = "MergedCell", get_all))]
+pub struct MergedCell {
+    /// Start row (0-based)
+    pub start_row: u32,
+    /// Start column (0-based)
+    pub start_col: u32,
+    /// End row (0-based, inclusive)
+    pub end_row: u32,
+    /// End column (0-based, inclusive)
+    pub end_col: u32,
+}
+
+#[cfg(feature = "python")]
+#[pymethods]
+impl MergedCell {
+    fn __repr__(&self) -> String {
+        format!(
+            "MergedCell(start=({}, {}), end=({}, {}))",
+            self.start_row, self.start_col, self.end_row, self.end_col
+        )
+    }
+
+    /// Get the number of rows spanned by this merged cell
+    pub fn row_span(&self) -> u32 {
+        self.end_row - self.start_row + 1
+    }
+
+    /// Get the number of columns spanned by this merged cell
+    pub fn col_span(&self) -> u32 {
+        self.end_col - self.start_col + 1
+    }
+
+    /// Check if a cell position is within this merged region
+    pub fn contains(&self, row: u32, col: u32) -> bool {
+        row >= self.start_row && row <= self.end_row && col >= self.start_col && col <= self.end_col
+    }
+}
+
+impl From<&CalDimensions> for MergedCell {
+    fn from(dim: &CalDimensions) -> Self {
+        Self {
+            start_row: dim.start.0,
+            start_col: dim.start.1,
+            end_row: dim.end.0,
+            end_col: dim.end.1,
+        }
+    }
+}

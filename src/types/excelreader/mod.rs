@@ -22,7 +22,7 @@ use crate::{
         dtype::{DTypeCoercion, DTypes},
         excelsheet::{SelectedColumns, SkipRows},
         idx_or_name::IdxOrName,
-        style::{SheetLayout, SheetStyles},
+        style::{MergedCell, SheetLayout, SheetStyles},
     },
 };
 
@@ -128,6 +128,33 @@ impl ExcelSheets {
         }
         .map_err(|err| FastExcelErrorKind::CalamineError(err).into())
         .with_context(|| format!("Error while loading layout for sheet {name}"))
+    }
+
+    fn worksheet_merge_cells(&mut self, name: &str) -> FastExcelResult<Vec<calamine::Dimensions>> {
+        match self {
+            Self::File(Sheets::Xlsx(sheets)) => sheets
+                .worksheet_merge_cells(name)
+                .transpose()
+                .map_err(|err| FastExcelErrorKind::CalamineError(err.into()).into())
+                .with_context(|| format!("Error while loading merged cells for sheet {name}"))?
+                .ok_or_else(|| FastExcelErrorKind::SheetNotFound(IdxOrName::Name(name.to_string())).into()),
+            Self::File(Sheets::Xls(sheets)) => sheets
+                .worksheet_merge_cells(name)
+                .ok_or_else(|| FastExcelErrorKind::SheetNotFound(IdxOrName::Name(name.to_string())).into()),
+            Self::File(Sheets::Ods(_)) => Ok(vec![]), // ODS merge cells not supported by calamine
+            Self::File(Sheets::Xlsb(_)) => Ok(vec![]), // xlsb doesn't support merge cells yet
+            Self::Bytes(Sheets::Xlsx(sheets)) => sheets
+                .worksheet_merge_cells(name)
+                .transpose()
+                .map_err(|err| FastExcelErrorKind::CalamineError(err.into()).into())
+                .with_context(|| format!("Error while loading merged cells for sheet {name}"))?
+                .ok_or_else(|| FastExcelErrorKind::SheetNotFound(IdxOrName::Name(name.to_string())).into()),
+            Self::Bytes(Sheets::Xls(sheets)) => sheets
+                .worksheet_merge_cells(name)
+                .ok_or_else(|| FastExcelErrorKind::SheetNotFound(IdxOrName::Name(name.to_string())).into()),
+            Self::Bytes(Sheets::Ods(_)) => Ok(vec![]), // ODS merge cells not supported by calamine
+            Self::Bytes(Sheets::Xlsb(_)) => Ok(vec![]), // xlsb doesn't support merge cells yet
+        }
     }
 }
 
@@ -382,6 +409,13 @@ impl ExcelReader {
         let sheet_name = self.find_sheet_meta(idx_or_name)?.name.clone();
         let layout = self.sheets.worksheet_layout(&sheet_name)?;
         Ok(SheetLayout::from(&layout))
+    }
+
+    /// Get the merged cell regions for a sheet.
+    pub fn get_merged_cells(&mut self, idx_or_name: IdxOrName) -> FastExcelResult<Vec<MergedCell>> {
+        let sheet_name = self.find_sheet_meta(idx_or_name)?.name.clone();
+        let dimensions = self.sheets.worksheet_merge_cells(&sheet_name)?;
+        Ok(dimensions.iter().map(MergedCell::from).collect())
     }
 }
 

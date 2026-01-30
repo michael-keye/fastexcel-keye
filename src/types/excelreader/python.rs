@@ -17,7 +17,7 @@ use crate::{
             column_info::{build_available_columns_info, finalize_column_info},
         },
         idx_or_name::IdxOrName,
-        style::{SheetLayout, Style},
+        style::{MergedCell, SheetLayout, Style},
     },
     utils::schema::get_schema_sample_rows,
 };
@@ -351,6 +351,16 @@ impl ExcelReader {
     ) -> PyResult<SheetLayout> {
         let idx_or_name: IdxOrName = idx_or_name.try_into().into_pyresult()?;
         self.get_sheet_layout(idx_or_name).into_pyresult()
+    }
+
+    /// Get the merged cell regions for the sheet.
+    #[pyo3(name = "get_merged_cells")]
+    pub(crate) fn py_get_merged_cells(
+        &mut self,
+        idx_or_name: &Bound<'_, PyAny>,
+    ) -> PyResult<Vec<MergedCell>> {
+        let idx_or_name: IdxOrName = idx_or_name.try_into().into_pyresult()?;
+        self.get_merged_cells(idx_or_name).into_pyresult()
     }
 }
 

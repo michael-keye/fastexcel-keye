@@ -378,6 +378,28 @@ class SheetLayout:
     def get_row_height(self, row: int) -> float:
         """Get the effective height for a row (custom or default)"""
 
+class MergedCell:
+    """A merged cell region"""
+
+    @property
+    def start_row(self) -> int:
+        """Start row (0-based)"""
+    @property
+    def start_col(self) -> int:
+        """Start column (0-based)"""
+    @property
+    def end_row(self) -> int:
+        """End row (0-based, inclusive)"""
+    @property
+    def end_col(self) -> int:
+        """End column (0-based, inclusive)"""
+    def row_span(self) -> int:
+        """Get the number of rows spanned by this merged cell"""
+    def col_span(self) -> int:
+        """Get the number of columns spanned by this merged cell"""
+    def contains(self, row: int, col: int) -> bool:
+        """Check if a cell position is within this merged region"""
+
 class _ExcelReader:
     """A class representing an open Excel file and allowing to read its sheets"""
 
@@ -502,6 +524,8 @@ class _ExcelReader:
         """
     def get_layout(self, idx_or_name: str | int) -> SheetLayout:
         """Get the layout information (column widths, row heights) for the sheet."""
+    def get_merged_cells(self, idx_or_name: str | int) -> list[MergedCell]:
+        """Get the merged cell regions for the sheet."""
 
 def read_excel(source: str | bytes) -> _ExcelReader:
     """Reads an excel file and returns an ExcelReader"""

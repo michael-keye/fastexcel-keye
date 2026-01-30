@@ -40,6 +40,7 @@ from ._fastexcel import (
     Fill,
     Font,
     InvalidParametersError,
+    MergedCell,
     NumberFormat,
     Protection,
     RowHeight,
@@ -720,6 +721,14 @@ class ExcelReader:
         """
         return self._reader.get_layout(idx_or_name)
 
+    def get_merged_cells(self, idx_or_name: int | str) -> list[MergedCell]:
+        """Get the merged cell regions for the sheet.
+
+        :param idx_or_name: The index (starting at 0) or the name of the sheet.
+        :return: A list of MergedCell objects representing merged regions.
+        """
+        return self._reader.get_merged_cells(idx_or_name)
+
     def __repr__(self) -> str:
         return self._reader.__repr__()
 
@@ -768,6 +777,8 @@ __all__ = (
     "ColumnWidth",
     "RowHeight",
     "SheetLayout",
+    # Merged cells
+    "MergedCell",
     # Parse error information
     "CellError",
     "CellErrors",
