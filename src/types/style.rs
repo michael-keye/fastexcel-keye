@@ -16,7 +16,7 @@ use calamine::{
 use std::collections::HashMap;
 
 /// ARGB Color
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "python", pyclass(name = "Color", get_all))]
 pub struct Color {
     pub alpha: u8,
@@ -61,7 +61,7 @@ impl From<&CalColor> for Color {
 }
 
 /// Border style
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "python", pyclass(name = "BorderStyle", get_all))]
 pub struct BorderStyle {
     pub style: String,
@@ -105,7 +105,7 @@ impl From<&CalBorder> for BorderStyle {
 }
 
 /// All borders for a cell
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "python", pyclass(name = "Borders", get_all))]
 pub struct Borders {
     pub left: BorderStyle,
@@ -187,7 +187,7 @@ impl From<&CalFont> for Font {
 }
 
 /// Cell alignment
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "python", pyclass(name = "Alignment", get_all))]
 pub struct Alignment {
     pub horizontal: String,
@@ -246,7 +246,7 @@ impl From<&CalAlignment> for Alignment {
 }
 
 /// Fill properties
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "python", pyclass(name = "Fill", get_all))]
 pub struct Fill {
     pub pattern: String,
@@ -300,7 +300,7 @@ impl From<&CalFill> for Fill {
 }
 
 /// Number format
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "python", pyclass(name = "NumberFormat", get_all))]
 pub struct NumberFormat {
     pub format_code: String,
@@ -328,7 +328,7 @@ impl From<&CalNumberFormat> for NumberFormat {
 }
 
 /// Cell protection
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "python", pyclass(name = "Protection", get_all))]
 pub struct Protection {
     pub locked: bool,
@@ -438,28 +438,22 @@ impl SheetStyles {
         let mut style_ids: Vec<Vec<u32>> = vec![vec![0u32; width]; height];
         let mut palette: HashMap<u32, Style> = HashMap::new();
 
-        // Map from style content to our assigned ID
-        // We use a Vec to track seen styles and find duplicates by equality
-        let mut seen_styles: Vec<(Style, u32)> = Vec::new();
+        // Use pointer address as key for O(1) deduplication
+        // Calamine's StyleRange already deduplicates styles in its internal palette,
+        // so styles with the same pointer are guaranteed to be identical
+        let mut ptr_to_id: HashMap<*const CalStyle, u32> = HashMap::new();
         let mut next_id: u32 = 0;
 
         // Use calamine's cells() iterator which handles RLE decompression
         for (row, col, cal_style) in style_range.cells() {
-            let our_style = Style::from(cal_style);
+            let ptr = cal_style as *const CalStyle;
 
-            // Find existing style with same content, or create new entry
-            let id = if let Some((_, existing_id)) = seen_styles
-                .iter()
-                .find(|(s, _)| s.style_equals(&our_style))
-            {
-                *existing_id
-            } else {
+            let id = *ptr_to_id.entry(ptr).or_insert_with(|| {
                 let id = next_id;
                 next_id += 1;
-                palette.insert(id, our_style.clone());
-                seen_styles.push((our_style, id));
+                palette.insert(id, Style::from(cal_style));
                 id
-            };
+            });
 
             style_ids[row][col] = id;
         }
