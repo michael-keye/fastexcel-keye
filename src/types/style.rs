@@ -16,7 +16,7 @@ use calamine::{
 use std::collections::HashMap;
 
 /// ARGB Color
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "python", pyclass(name = "Color", get_all))]
 pub struct Color {
     pub alpha: u8,
@@ -61,7 +61,7 @@ impl From<&CalColor> for Color {
 }
 
 /// Border style
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "python", pyclass(name = "BorderStyle", get_all))]
 pub struct BorderStyle {
     pub style: String,
@@ -105,7 +105,7 @@ impl From<&CalBorder> for BorderStyle {
 }
 
 /// All borders for a cell
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "python", pyclass(name = "Borders", get_all))]
 pub struct Borders {
     pub left: BorderStyle,
@@ -141,7 +141,7 @@ impl From<&CalBorders> for Borders {
 }
 
 /// Font properties
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "python", pyclass(name = "Font", get_all))]
 pub struct Font {
     pub name: Option<String>,
@@ -187,7 +187,7 @@ impl From<&CalFont> for Font {
 }
 
 /// Cell alignment
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "python", pyclass(name = "Alignment", get_all))]
 pub struct Alignment {
     pub horizontal: String,
@@ -246,7 +246,7 @@ impl From<&CalAlignment> for Alignment {
 }
 
 /// Fill properties
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "python", pyclass(name = "Fill", get_all))]
 pub struct Fill {
     pub pattern: String,
@@ -300,7 +300,7 @@ impl From<&CalFill> for Fill {
 }
 
 /// Number format
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "python", pyclass(name = "NumberFormat", get_all))]
 pub struct NumberFormat {
     pub format_code: String,
@@ -328,7 +328,7 @@ impl From<&CalNumberFormat> for NumberFormat {
 }
 
 /// Cell protection
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "python", pyclass(name = "Protection", get_all))]
 pub struct Protection {
     pub locked: bool,
@@ -353,7 +353,7 @@ impl From<&CalProtection> for Protection {
 }
 
 /// Complete cell style
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "python", pyclass(name = "Style", get_all))]
 pub struct Style {
     pub style_id: Option<u32>,
@@ -363,6 +363,18 @@ pub struct Style {
     pub alignment: Option<Alignment>,
     pub number_format: Option<NumberFormat>,
     pub protection: Option<Protection>,
+}
+
+impl Style {
+    /// Compare styles by their visual properties (ignoring style_id)
+    pub fn style_equals(&self, other: &Self) -> bool {
+        self.font == other.font
+            && self.fill == other.fill
+            && self.borders == other.borders
+            && self.alignment == other.alignment
+            && self.number_format == other.number_format
+            && self.protection == other.protection
+    }
 }
 
 #[cfg(feature = "python")]
@@ -426,19 +438,36 @@ impl SheetStyles {
         let mut style_ids: Vec<Vec<u32>> = vec![vec![0u32; width]; height];
         let mut palette: HashMap<u32, Style> = HashMap::new();
 
-        // Use calamine's cells() iterator which handles RLE decompression
-        for (row, col, style) in style_range.cells() {
-            let id = style.style_id.unwrap_or(0);
-            style_ids[row][col] = id;
+        // Map from style content to our assigned ID
+        // We use a Vec to track seen styles and find duplicates by equality
+        let mut seen_styles: Vec<(Style, u32)> = Vec::new();
+        let mut next_id: u32 = 0;
 
-            // Only insert if we haven't seen this style_id yet
-            palette.entry(id).or_insert_with(|| Style::from(style));
+        // Use calamine's cells() iterator which handles RLE decompression
+        for (row, col, cal_style) in style_range.cells() {
+            let our_style = Style::from(cal_style);
+
+            // Find existing style with same content, or create new entry
+            let id = if let Some((_, existing_id)) = seen_styles
+                .iter()
+                .find(|(s, _)| s.style_equals(&our_style))
+            {
+                *existing_id
+            } else {
+                let id = next_id;
+                next_id += 1;
+                palette.insert(id, our_style.clone());
+                seen_styles.push((our_style, id));
+                id
+            };
+
+            style_ids[row][col] = id;
         }
 
-        // Ensure palette has default style at id 0
-        palette
-            .entry(0)
-            .or_insert_with(|| Style::from(&CalStyle::default()));
+        // Ensure palette has at least one entry (default style at id 0)
+        if palette.is_empty() {
+            palette.insert(0, Style::from(&CalStyle::default()));
+        }
 
         Self {
             palette,
