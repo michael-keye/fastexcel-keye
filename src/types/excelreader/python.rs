@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use arrow_array::RecordBatch;
 use pyo3::{Bound, IntoPyObjectExt, PyAny, PyResult, Python, pymethods, types::PyString};
 
@@ -15,6 +17,7 @@ use crate::{
             column_info::{build_available_columns_info, finalize_column_info},
         },
         idx_or_name::IdxOrName,
+        style::{SheetLayout, Style},
     },
     utils::schema::get_schema_sample_rows,
 };
@@ -312,6 +315,42 @@ impl ExcelReader {
     #[getter("sheet_names")]
     pub(crate) fn py_sheet_names(&self) -> Vec<&str> {
         self.sheet_names()
+    }
+
+    /// Get a 2D array of style IDs for each cell in the sheet.
+    ///
+    /// Use with `get_style_palette()` to look up the style for each cell.
+    #[pyo3(name = "get_style_ids")]
+    pub(crate) fn py_get_style_ids(
+        &mut self,
+        idx_or_name: &Bound<'_, PyAny>,
+    ) -> PyResult<Vec<Vec<u32>>> {
+        let idx_or_name: IdxOrName = idx_or_name.try_into().into_pyresult()?;
+        let styles = self.get_sheet_styles(idx_or_name).into_pyresult()?;
+        Ok(styles.style_ids)
+    }
+
+    /// Get a mapping of style ID to Style object for the sheet.
+    ///
+    /// Use with `get_style_ids()` to look up the style for each cell.
+    #[pyo3(name = "get_style_palette")]
+    pub(crate) fn py_get_style_palette(
+        &mut self,
+        idx_or_name: &Bound<'_, PyAny>,
+    ) -> PyResult<HashMap<u32, Style>> {
+        let idx_or_name: IdxOrName = idx_or_name.try_into().into_pyresult()?;
+        let styles = self.get_sheet_styles(idx_or_name).into_pyresult()?;
+        Ok(styles.palette)
+    }
+
+    /// Get the layout information (column widths, row heights) for the sheet.
+    #[pyo3(name = "get_layout")]
+    pub(crate) fn py_get_layout(
+        &mut self,
+        idx_or_name: &Bound<'_, PyAny>,
+    ) -> PyResult<SheetLayout> {
+        let idx_or_name: IdxOrName = idx_or_name.try_into().into_pyresult()?;
+        self.get_sheet_layout(idx_or_name).into_pyresult()
     }
 }
 

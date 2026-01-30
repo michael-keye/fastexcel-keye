@@ -7,8 +7,8 @@ use std::{
 };
 
 use calamine::{
-    Data, HeaderRow, Range, Reader, Sheet as CalamineSheet, Sheets, Table, open_workbook_auto,
-    open_workbook_auto_from_rs,
+    Data, HeaderRow, Range, Reader, Sheet as CalamineSheet, Sheets, StyleRange, Table,
+    WorksheetLayout, open_workbook_auto, open_workbook_auto_from_rs,
 };
 #[cfg(feature = "python")]
 use calamine::{DataRef, ReaderRef};
@@ -22,6 +22,7 @@ use crate::{
         dtype::{DTypeCoercion, DTypes},
         excelsheet::{SelectedColumns, SkipRows},
         idx_or_name::IdxOrName,
+        style::{SheetLayout, SheetStyles},
     },
 };
 
@@ -109,6 +110,24 @@ impl ExcelSheets {
             Self::File(sheets) => extract_table_range(name, sheets),
             Self::Bytes(sheets) => extract_table_range(name, sheets),
         }
+    }
+
+    fn worksheet_style(&mut self, name: &str) -> FastExcelResult<StyleRange> {
+        match self {
+            Self::File(sheets) => sheets.worksheet_style(name),
+            Self::Bytes(sheets) => sheets.worksheet_style(name),
+        }
+        .map_err(|err| FastExcelErrorKind::CalamineError(err).into())
+        .with_context(|| format!("Error while loading styles for sheet {name}"))
+    }
+
+    fn worksheet_layout(&mut self, name: &str) -> FastExcelResult<WorksheetLayout> {
+        match self {
+            Self::File(sheets) => sheets.worksheet_layout(name),
+            Self::Bytes(sheets) => sheets.worksheet_layout(name),
+        }
+        .map_err(|err| FastExcelErrorKind::CalamineError(err).into())
+        .with_context(|| format!("Error while loading layout for sheet {name}"))
     }
 }
 
@@ -349,6 +368,20 @@ impl ExcelReader {
 
     pub fn defined_names(&mut self) -> FastExcelResult<Vec<DefinedName>> {
         self.sheets.defined_names()
+    }
+
+    /// Get the styles for a sheet, returning style IDs for each cell and a palette of styles.
+    pub fn get_sheet_styles(&mut self, idx_or_name: IdxOrName) -> FastExcelResult<SheetStyles> {
+        let sheet_name = self.find_sheet_meta(idx_or_name)?.name.clone();
+        let style_range = self.sheets.worksheet_style(&sheet_name)?;
+        Ok(SheetStyles::from_calamine(&style_range))
+    }
+
+    /// Get the layout (column widths, row heights) for a sheet.
+    pub fn get_sheet_layout(&mut self, idx_or_name: IdxOrName) -> FastExcelResult<SheetLayout> {
+        let sheet_name = self.find_sheet_meta(idx_or_name)?.name.clone();
+        let layout = self.sheets.worksheet_layout(&sheet_name)?;
+        Ok(SheetLayout::from(&layout))
     }
 }
 

@@ -21,19 +21,31 @@ except ImportError:
     _PYARROW_AVAILABLE = False
 
 from ._fastexcel import (
+    Alignment,
     ArrowError,
+    Borders,
+    BorderStyle,
     CalamineCellError,
     CalamineError,
     CannotRetrieveCellDataError,
     CellError,
     CellErrors,
+    Color,
     ColumnInfo,
     ColumnInfoNoDtype,
     ColumnNotFoundError,
+    ColumnWidth,
     DefinedName,
     FastExcelError,
+    Fill,
+    Font,
     InvalidParametersError,
+    NumberFormat,
+    Protection,
+    RowHeight,
+    SheetLayout,
     SheetNotFoundError,
+    Style,
     UnsupportedColumnTypeCombinationError,
     __version__,
     _ExcelReader,
@@ -682,6 +694,32 @@ class ExcelReader:
             dtypes=dtypes,
         )
 
+    def get_style_ids(self, idx_or_name: int | str) -> list[list[int]]:
+        """Get a 2D array of style IDs for each cell in the sheet.
+
+        :param idx_or_name: The index (starting at 0) or the name of the sheet.
+        :return: A 2D list of style IDs, where each inner list represents a row.
+                 Use with `get_style_palette()` to look up the style for each cell.
+        """
+        return self._reader.get_style_ids(idx_or_name)
+
+    def get_style_palette(self, idx_or_name: int | str) -> dict[int, Style]:
+        """Get a mapping of style ID to Style object for the sheet.
+
+        :param idx_or_name: The index (starting at 0) or the name of the sheet.
+        :return: A dictionary mapping style IDs to Style objects.
+                 Use with `get_style_ids()` to look up the style for each cell.
+        """
+        return self._reader.get_style_palette(idx_or_name)
+
+    def get_layout(self, idx_or_name: int | str) -> SheetLayout:
+        """Get the layout information (column widths, row heights) for the sheet.
+
+        :param idx_or_name: The index (starting at 0) or the name of the sheet.
+        :return: A SheetLayout object containing column widths and row heights.
+        """
+        return self._reader.get_layout(idx_or_name)
+
     def __repr__(self) -> str:
         return self._reader.__repr__()
 
@@ -716,6 +754,20 @@ __all__ = (
     "ColumnInfo",
     # Defined names
     "DefinedName",
+    # Style types
+    "Alignment",
+    "BorderStyle",
+    "Borders",
+    "Color",
+    "Fill",
+    "Font",
+    "NumberFormat",
+    "Protection",
+    "Style",
+    # Layout types
+    "ColumnWidth",
+    "RowHeight",
+    "SheetLayout",
     # Parse error information
     "CellError",
     "CellErrors",

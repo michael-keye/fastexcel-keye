@@ -66,6 +66,10 @@ fn get_python_version() -> String {
 #[pymodule(gil_used = false)]
 fn _fastexcel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     use crate::types::excelsheet::column_info::{ColumnInfo, ColumnInfoNoDtype};
+    use crate::types::style::{
+        Alignment, BorderStyle, Borders, Color, ColumnWidth, Fill, Font, NumberFormat, Protection,
+        RowHeight, SheetLayout, Style,
+    };
 
     pyo3_log::init();
 
@@ -79,6 +83,20 @@ fn _fastexcel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<ExcelSheet>()?;
     m.add_class::<ExcelReader>()?;
     m.add_class::<ExcelTable>()?;
+    // Style types
+    m.add_class::<Style>()?;
+    m.add_class::<Font>()?;
+    m.add_class::<Fill>()?;
+    m.add_class::<Borders>()?;
+    m.add_class::<BorderStyle>()?;
+    m.add_class::<Alignment>()?;
+    m.add_class::<Color>()?;
+    m.add_class::<NumberFormat>()?;
+    m.add_class::<Protection>()?;
+    // Layout types
+    m.add_class::<SheetLayout>()?;
+    m.add_class::<ColumnWidth>()?;
+    m.add_class::<RowHeight>()?;
     m.add("__version__", get_python_version())?;
 
     // errors

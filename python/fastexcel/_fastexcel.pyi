@@ -192,6 +192,192 @@ class _ExcelTable:
         Arrow-compatible libraries without requiring PyArrow as a dependency.
         """
 
+# Style types
+
+class Color:
+    """ARGB Color"""
+
+    @property
+    def alpha(self) -> int: ...
+    @property
+    def red(self) -> int: ...
+    @property
+    def green(self) -> int: ...
+    @property
+    def blue(self) -> int: ...
+    def to_hex(self) -> str:
+        """Returns the color as a hex string (e.g., '#FF0000' for red)"""
+    def to_argb(self) -> int:
+        """Returns the color as an ARGB integer"""
+
+class BorderStyle:
+    """Border style for a single side"""
+
+    @property
+    def style(self) -> str:
+        """Border style: 'none', 'thin', 'medium', 'thick', 'double', 'hair', 'dashed', 'dotted', etc."""
+    @property
+    def color(self) -> Color | None: ...
+
+class Borders:
+    """All borders for a cell"""
+
+    @property
+    def left(self) -> BorderStyle: ...
+    @property
+    def right(self) -> BorderStyle: ...
+    @property
+    def top(self) -> BorderStyle: ...
+    @property
+    def bottom(self) -> BorderStyle: ...
+    @property
+    def diagonal_down(self) -> BorderStyle: ...
+    @property
+    def diagonal_up(self) -> BorderStyle: ...
+
+class Font:
+    """Font properties"""
+
+    @property
+    def name(self) -> str | None: ...
+    @property
+    def size(self) -> float | None: ...
+    @property
+    def bold(self) -> bool: ...
+    @property
+    def italic(self) -> bool: ...
+    @property
+    def underline(self) -> str:
+        """Underline style: 'none', 'single', 'double', 'singleAccounting', 'doubleAccounting'"""
+    @property
+    def strikethrough(self) -> bool: ...
+    @property
+    def color(self) -> Color | None: ...
+
+class Alignment:
+    """Cell alignment properties"""
+
+    @property
+    def horizontal(self) -> str:
+        """Horizontal alignment: 'left', 'center', 'right', 'justify', 'distributed', 'fill', 'general'"""
+    @property
+    def vertical(self) -> str:
+        """Vertical alignment: 'top', 'center', 'bottom', 'justify', 'distributed'"""
+    @property
+    def text_rotation(self) -> int | None:
+        """Text rotation in degrees (0-180), or 255 for stacked text"""
+    @property
+    def wrap_text(self) -> bool: ...
+    @property
+    def indent(self) -> int | None: ...
+    @property
+    def shrink_to_fit(self) -> bool: ...
+
+class Fill:
+    """Fill properties"""
+
+    @property
+    def pattern(self) -> str:
+        """Fill pattern: 'none', 'solid', 'darkGray', 'mediumGray', 'lightGray', etc."""
+    @property
+    def foreground_color(self) -> Color | None: ...
+    @property
+    def background_color(self) -> Color | None: ...
+
+class NumberFormat:
+    """Number format"""
+
+    @property
+    def format_code(self) -> str:
+        """The format code string (e.g., 'General', '0.00', 'yyyy-mm-dd')"""
+    @property
+    def format_id(self) -> int | None:
+        """The format ID"""
+
+class Protection:
+    """Cell protection properties"""
+
+    @property
+    def locked(self) -> bool: ...
+    @property
+    def hidden(self) -> bool: ...
+
+class Style:
+    """Complete cell style"""
+
+    @property
+    def style_id(self) -> int | None:
+        """The Excel style ID"""
+    @property
+    def font(self) -> Font | None: ...
+    @property
+    def fill(self) -> Fill | None: ...
+    @property
+    def borders(self) -> Borders | None: ...
+    @property
+    def alignment(self) -> Alignment | None: ...
+    @property
+    def number_format(self) -> NumberFormat | None: ...
+    @property
+    def protection(self) -> Protection | None: ...
+
+# Layout types
+
+class ColumnWidth:
+    """Column width information"""
+
+    @property
+    def column(self) -> int:
+        """Column index (0-based)"""
+    @property
+    def width(self) -> float:
+        """Width in Excel character units"""
+    @property
+    def custom_width(self) -> bool:
+        """Whether the width is custom (manually set)"""
+    @property
+    def hidden(self) -> bool:
+        """Whether the column is hidden"""
+    @property
+    def best_fit(self) -> bool:
+        """Best fit width"""
+
+class RowHeight:
+    """Row height information"""
+
+    @property
+    def row(self) -> int:
+        """Row index (0-based)"""
+    @property
+    def height(self) -> float:
+        """Height in points"""
+    @property
+    def custom_height(self) -> bool:
+        """Whether the height is custom (manually set)"""
+    @property
+    def hidden(self) -> bool:
+        """Whether the row is hidden"""
+
+class SheetLayout:
+    """Worksheet layout information (column widths and row heights)"""
+
+    @property
+    def default_column_width(self) -> float | None:
+        """Default column width in Excel character units"""
+    @property
+    def default_row_height(self) -> float | None:
+        """Default row height in points"""
+    @property
+    def column_widths(self) -> dict[int, ColumnWidth]:
+        """Column widths (only columns with custom widths)"""
+    @property
+    def row_heights(self) -> dict[int, RowHeight]:
+        """Row heights (only rows with custom heights)"""
+    def get_column_width(self, column: int) -> float:
+        """Get the effective width for a column (custom or default)"""
+    def get_row_height(self, row: int) -> float:
+        """Get the effective height for a row (custom or default)"""
+
 class _ExcelReader:
     """A class representing an open Excel file and allowing to read its sheets"""
 
@@ -304,6 +490,18 @@ class _ExcelReader:
     def sheet_names(self) -> list[str]: ...
     def table_names(self, sheet_name: str | None = None) -> list[str]: ...
     def defined_names(self) -> list[DefinedName]: ...
+    def get_style_ids(self, idx_or_name: str | int) -> list[list[int]]:
+        """Get a 2D array of style IDs for each cell in the sheet.
+
+        Use with `get_style_palette()` to look up the style for each cell.
+        """
+    def get_style_palette(self, idx_or_name: str | int) -> dict[int, Style]:
+        """Get a mapping of style ID to Style object for the sheet.
+
+        Use with `get_style_ids()` to look up the style for each cell.
+        """
+    def get_layout(self, idx_or_name: str | int) -> SheetLayout:
+        """Get the layout information (column widths, row heights) for the sheet."""
 
 def read_excel(source: str | bytes) -> _ExcelReader:
     """Reads an excel file and returns an ExcelReader"""
