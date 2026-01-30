@@ -115,6 +115,14 @@ jobs:
       - name: List artifacts
         run: ls -la dist/
 
+      - name: Publish to PyPI
+        uses: PyO3/maturin-action@v1
+        env:
+          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        with:
+          command: upload
+          args: "--skip-existing dist/*"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
