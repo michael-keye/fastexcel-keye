@@ -215,7 +215,7 @@ class BorderStyle:
 
     @property
     def style(self) -> str:
-        """Border style: 'none', 'thin', 'medium', 'thick', 'double', 'hair', 'dashed', 'dotted', etc."""
+        """Border style: 'none', 'thin', 'medium', 'thick', 'double', 'hair', etc."""
     @property
     def color(self) -> Color | None: ...
 
@@ -259,7 +259,7 @@ class Alignment:
 
     @property
     def horizontal(self) -> str:
-        """Horizontal alignment: 'left', 'center', 'right', 'justify', 'distributed', 'fill', 'general'"""
+        """Horizontal alignment: 'left', 'center', 'right', 'justify', 'fill', etc."""
     @property
     def vertical(self) -> str:
         """Vertical alignment: 'top', 'center', 'bottom', 'justify', 'distributed'"""
