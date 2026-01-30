@@ -56,7 +56,7 @@ wheels = [
 ]
 
 [[package]]
-name = "fastexcel"
+name = "fastexcel-keye"
 source = { virtual = "." }
 
 [package.optional-dependencies]
@@ -120,7 +120,7 @@ requires-dist = [
     { name = "pyarrow", marker = "extra == 'pyarrow'", specifier = ">=8.0.0" },
     { name = "typing-extensions", marker = "python_full_version < '3.10'", specifier = ">=4.0.0" },
 ]
-provides-extras = ["pyarrow", "pandas", "polars"]
+provides-extras = ["pandas", "polars", "pyarrow"]
 
 [package.metadata.requires-dev]
 all = [
