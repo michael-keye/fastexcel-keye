@@ -515,18 +515,28 @@ impl SheetStyles {
             _ => ((0, 0), (0, 0)),
         };
 
+        let row_offset = start.0 as usize;
+        let col_offset = start.1 as usize;
         let height = style_range.height();
         let width = style_range.width();
 
-        // Pre-allocate the 2D style_ids array
-        let mut style_ids: Vec<Vec<u32>> = vec![vec![0u32; width]; height];
+        // Pad so style_ids[r][c] uses absolute Excel coordinates (0-indexed from A1).
+        // This keeps style_ids aligned with DataFrames produced by skip_rows=0.
+        let abs_height = row_offset + height;
+        let abs_width = col_offset + width;
+
+        let mut style_ids: Vec<Vec<u32>> = vec![vec![0u32; abs_width]; abs_height];
+
+        // Reserve ID 0 for the default/empty style (used by padded cells)
         let mut palette: HashMap<u32, Style> = HashMap::new();
+        palette.insert(0, Style::from(&CalStyle::default()));
 
         // O(1) content-based deduplication using a hashable key
         let mut key_to_id: HashMap<StyleKey, u32> = HashMap::new();
-        let mut next_id: u32 = 0;
+        let mut next_id: u32 = 1; // start at 1; 0 is reserved for default
 
-        // Use calamine's cells() iterator which handles RLE decompression
+        // cells() yields (row, col) relative to the style range;
+        // shift to absolute coordinates.
         for (row, col, cal_style) in style_range.cells() {
             let key = StyleKey::from_calamine(cal_style);
 
@@ -537,12 +547,7 @@ impl SheetStyles {
                 id
             });
 
-            style_ids[row][col] = id;
-        }
-
-        // Ensure palette has at least one entry (default style at id 0)
-        if palette.is_empty() {
-            palette.insert(0, Style::from(&CalStyle::default()));
+            style_ids[row_offset + row][col_offset + col] = id;
         }
 
         Self {
