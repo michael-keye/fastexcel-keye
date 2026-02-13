@@ -42,7 +42,7 @@ pyo3-arrow = { version = "^0.14", default-features = false, optional = true }
 pyo3-log = { version = "^0.13.2", optional = true }
 
 [dev-dependencies]
-anyhow = "1.0.100"
+anyhow = "1.0.101"
 pretty_assertions = { version = "^1.4.1", features = ["unstable"] }
 rstest = { version = "^0.26.1", default-features = false }
 
