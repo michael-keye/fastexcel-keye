@@ -719,15 +719,15 @@ class ExcelReader:
         """
         return self._reader.get_style_palette(idx_or_name, n_rows)
 
-    def get_sheet_styles(self, idx_or_name: int | str, n_rows: int | None = None) -> tuple[list[list[int]], dict[int, Style]]:
+    def get_sheet_styles(self, idx_or_name: int | str, n_rows: int | None = None) -> tuple["pa.RecordBatch", dict[int, Style]]:
         """Get style IDs and palette in a single call.
 
-        More efficient than calling `get_style_ids()` and `get_style_palette()`
-        separately, as it only parses the sheet XML once.
+        Returns a PyArrow RecordBatch of UInt32 columns (one per spreadsheet column)
+        and the style palette dict. Convert to Polars with ``pl.from_arrow(batch)``.
 
         :param idx_or_name: The index (starting at 0) or the name of the sheet.
         :param n_rows: Optional maximum number of rows to return.
-        :return: A tuple of (style_ids, palette).
+        :return: A tuple of (style_ids RecordBatch, palette).
         """
         return self._reader.get_sheet_styles(idx_or_name, n_rows)
 

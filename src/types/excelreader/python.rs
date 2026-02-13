@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
 use arrow_array::RecordBatch;
+use arrow_array::array::UInt32Array;
+use arrow_schema::{DataType, Field, Schema};
 use pyo3::{Bound, IntoPyObjectExt, PyAny, PyResult, Python, pymethods, types::PyString};
 
 use super::{DefinedName, ExcelReader};
@@ -366,15 +368,44 @@ impl ExcelReader {
     }
 
     /// Get style IDs and palette in a single call (avoids double XML parse).
+    ///
+    /// Returns a PyArrow RecordBatch of UInt32 columns (one per spreadsheet column)
+    /// plus the style palette. Use `.to_polars()` or `pl.DataFrame(batch)` to convert.
     #[pyo3(name = "get_sheet_styles", signature = (idx_or_name, n_rows=None))]
-    pub(crate) fn py_get_sheet_styles(
+    pub(crate) fn py_get_sheet_styles<'py>(
         &mut self,
-        idx_or_name: &Bound<'_, PyAny>,
+        py: Python<'py>,
+        idx_or_name: &Bound<'py, PyAny>,
         n_rows: Option<usize>,
-    ) -> PyResult<(Vec<Vec<u32>>, HashMap<u32, Style>)> {
+    ) -> PyResult<(Bound<'py, PyAny>, HashMap<u32, Style>)> {
+        use arrow_pyarrow::ToPyArrow;
+
         let idx_or_name: IdxOrName = idx_or_name.try_into().into_pyresult()?;
         let styles = self.get_sheet_styles(idx_or_name, n_rows).into_pyresult()?;
-        Ok((styles.style_ids, styles.palette))
+
+        let rows = styles.style_ids.len();
+        let cols = if rows > 0 { styles.style_ids[0].len() } else { 0 };
+
+        // Build Arrow RecordBatch: one UInt32 column per spreadsheet column
+        let fields: Vec<Field> = (0..cols)
+            .map(|i| Field::new(format!("col_{}", i), DataType::UInt32, false))
+            .collect();
+        let schema = std::sync::Arc::new(Schema::new(fields));
+
+        let arrays: Vec<std::sync::Arc<dyn arrow_array::Array>> = (0..cols)
+            .map(|c| {
+                let values: Vec<u32> = (0..rows).map(|r| styles.style_ids[r][c]).collect();
+                std::sync::Arc::new(UInt32Array::from(values)) as _
+            })
+            .collect();
+
+        let batch = RecordBatch::try_new(schema, arrays)
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+
+        let py_batch = batch.to_pyarrow(py)
+            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+
+        Ok((py_batch, styles.palette))
     }
 }
 

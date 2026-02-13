@@ -522,8 +522,8 @@ class _ExcelReader:
 
         Use with `get_style_ids()` to look up the style for each cell.
         """
-    def get_sheet_styles(self, idx_or_name: str | int, n_rows: int | None = None) -> tuple[list[list[int]], dict[int, Style]]:
-        """Get style IDs and palette in a single call."""
+    def get_sheet_styles(self, idx_or_name: str | int, n_rows: int | None = None) -> tuple[bytes, int, int, dict[int, Style]]:
+        """Get style IDs as flat u32 bytes, row count, col count, and palette."""
     def get_layout(self, idx_or_name: str | int) -> SheetLayout:
         """Get the layout information (column widths, row heights) for the sheet."""
     def get_merged_cells(self, idx_or_name: str | int) -> list[MergedCell]:
