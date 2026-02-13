@@ -7,8 +7,8 @@ use std::{
 };
 
 use calamine::{
-    Data, HeaderRow, Range, Reader, Sheet as CalamineSheet, Sheets, StyleRange, Table,
-    WorksheetLayout, open_workbook_auto, open_workbook_auto_from_rs,
+    Data, HeaderRow, Range, Reader, Sheet as CalamineSheet, Sheets, Style as CalStyle, StyleRange,
+    Table, WorksheetLayout, open_workbook_auto, open_workbook_auto_from_rs,
 };
 #[cfg(feature = "python")]
 use calamine::{DataRef, ReaderRef};
@@ -119,6 +119,19 @@ impl ExcelSheets {
         }
         .map_err(|err| FastExcelErrorKind::CalamineError(err).into())
         .with_context(|| format!("Error while loading styles for sheet {name}"))
+    }
+
+    fn worksheet_style_ids(
+        &mut self,
+        name: &str,
+        n_rows: Option<u32>,
+    ) -> FastExcelResult<(Vec<(u32, u32, usize)>, Vec<CalStyle>)> {
+        match self {
+            Self::File(sheets) => sheets.worksheet_style_ids(name, n_rows),
+            Self::Bytes(sheets) => sheets.worksheet_style_ids(name, n_rows),
+        }
+        .map_err(|err| FastExcelErrorKind::CalamineError(err).into())
+        .with_context(|| format!("Error while loading style IDs for sheet {name}"))
     }
 
     fn worksheet_layout(&mut self, name: &str) -> FastExcelResult<WorksheetLayout> {
@@ -398,10 +411,11 @@ impl ExcelReader {
     }
 
     /// Get the styles for a sheet, returning style IDs for each cell and a palette of styles.
-    pub fn get_sheet_styles(&mut self, idx_or_name: IdxOrName) -> FastExcelResult<SheetStyles> {
+    pub fn get_sheet_styles(&mut self, idx_or_name: IdxOrName, n_rows: Option<usize>) -> FastExcelResult<SheetStyles> {
         let sheet_name = self.find_sheet_meta(idx_or_name)?.name.clone();
-        let style_range = self.sheets.worksheet_style(&sheet_name)?;
-        Ok(SheetStyles::from_calamine(&style_range))
+        let n_rows_u32 = n_rows.map(|n| n as u32);
+        let (cells, cal_palette) = self.sheets.worksheet_style_ids(&sheet_name, n_rows_u32)?;
+        Ok(SheetStyles::from_raw_ids(cells, &cal_palette, n_rows))
     }
 
     /// Get the layout (column widths, row heights) for a sheet.

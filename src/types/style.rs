@@ -509,7 +509,7 @@ impl StyleKey {
 }
 
 impl SheetStyles {
-    pub fn from_calamine(style_range: &CalStyleRange) -> Self {
+    pub fn from_calamine(style_range: &CalStyleRange, n_rows: Option<usize>) -> Self {
         let (start, end) = match (style_range.start(), style_range.end()) {
             (Some(s), Some(e)) => (s, e),
             _ => ((0, 0), (0, 0)),
@@ -522,8 +522,13 @@ impl SheetStyles {
 
         // Pad so style_ids[r][c] uses absolute Excel coordinates (0-indexed from A1).
         // This keeps style_ids aligned with DataFrames produced by skip_rows=0.
-        let abs_height = row_offset + height;
+        let mut abs_height = row_offset + height;
         let abs_width = col_offset + width;
+
+        // Cap to n_rows if provided
+        if let Some(max) = n_rows {
+            abs_height = abs_height.min(max);
+        }
 
         let mut style_ids: Vec<Vec<u32>> = vec![vec![0u32; abs_width]; abs_height];
 
@@ -538,6 +543,11 @@ impl SheetStyles {
         // cells() yields (row, col) relative to the style range;
         // shift to absolute coordinates.
         for (row, col, cal_style) in style_range.cells() {
+            let abs_row = row_offset + row;
+            if abs_row >= abs_height {
+                break;
+            }
+
             let key = StyleKey::from_calamine(cal_style);
 
             let id = *key_to_id.entry(key).or_insert_with(|| {
@@ -547,8 +557,79 @@ impl SheetStyles {
                 id
             });
 
-            style_ids[row_offset + row][col_offset + col] = id;
+            style_ids[abs_row][col_offset + col] = id;
         }
+
+        Self {
+            palette,
+            style_ids,
+            start,
+            end,
+        }
+    }
+
+    /// Build SheetStyles directly from raw (row, col, style_id) triples and a calamine palette.
+    /// This skips the StyleRange intermediary entirely.
+    pub fn from_raw_ids(
+        cells: Vec<(u32, u32, usize)>,
+        cal_palette: &[CalStyle],
+        n_rows: Option<usize>,
+    ) -> Self {
+        if cells.is_empty() {
+            return Self {
+                palette: {
+                    let mut p = HashMap::new();
+                    p.insert(0, Style::from(&CalStyle::default()));
+                    p
+                },
+                style_ids: Vec::new(),
+                start: (0, 0),
+                end: (0, 0),
+            };
+        }
+
+        // Determine grid dimensions from the data
+        let max_row = cells.iter().map(|(r, _, _)| *r).max().unwrap_or(0) as usize;
+        let max_col = cells.iter().map(|(_, c, _)| *c).max().unwrap_or(0) as usize;
+
+        let abs_height = if let Some(n) = n_rows {
+            n.min(max_row + 1)
+        } else {
+            max_row + 1
+        };
+        let abs_width = max_col + 1;
+
+        let mut style_ids: Vec<Vec<u32>> = vec![vec![0u32; abs_width]; abs_height];
+
+        // Reserve ID 0 for default
+        let mut palette: HashMap<u32, Style> = HashMap::new();
+        palette.insert(0, Style::from(&CalStyle::default()));
+
+        // Deduplicate: map calamine style_id -> our style_id
+        let mut cal_to_our: HashMap<usize, u32> = HashMap::new();
+        let mut next_id: u32 = 1;
+
+        for (row, col, cal_sid) in &cells {
+            let r = *row as usize;
+            let c = *col as usize;
+            if r >= abs_height || c >= abs_width {
+                continue;
+            }
+
+            let our_id = *cal_to_our.entry(*cal_sid).or_insert_with(|| {
+                let id = next_id;
+                next_id += 1;
+                if *cal_sid < cal_palette.len() {
+                    palette.insert(id, Style::from(&cal_palette[*cal_sid]));
+                }
+                id
+            });
+
+            style_ids[r][c] = our_id;
+        }
+
+        let start = (0u32, 0u32);
+        let end = (abs_height.saturating_sub(1) as u32, abs_width.saturating_sub(1) as u32);
 
         Self {
             palette,

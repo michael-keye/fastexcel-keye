@@ -695,23 +695,41 @@ class ExcelReader:
             dtypes=dtypes,
         )
 
-    def get_style_ids(self, idx_or_name: int | str) -> list[list[int]]:
+    def get_style_ids(self, idx_or_name: int | str, n_rows: int | None = None) -> list[list[int]]:
         """Get a 2D array of style IDs for each cell in the sheet.
 
         :param idx_or_name: The index (starting at 0) or the name of the sheet.
+        :param n_rows: Optional maximum number of rows to return. When set, only the
+                       first ``n_rows`` rows of style data are materialized, saving
+                       memory on large sheets.
         :return: A 2D list of style IDs, where each inner list represents a row.
                  Use with `get_style_palette()` to look up the style for each cell.
         """
-        return self._reader.get_style_ids(idx_or_name)
+        return self._reader.get_style_ids(idx_or_name, n_rows)
 
-    def get_style_palette(self, idx_or_name: int | str) -> dict[int, Style]:
+    def get_style_palette(self, idx_or_name: int | str, n_rows: int | None = None) -> dict[int, Style]:
         """Get a mapping of style ID to Style object for the sheet.
 
         :param idx_or_name: The index (starting at 0) or the name of the sheet.
+        :param n_rows: Optional maximum number of rows to consider. When set, only
+                       styles used in the first ``n_rows`` rows are included in the
+                       palette.
         :return: A dictionary mapping style IDs to Style objects.
                  Use with `get_style_ids()` to look up the style for each cell.
         """
-        return self._reader.get_style_palette(idx_or_name)
+        return self._reader.get_style_palette(idx_or_name, n_rows)
+
+    def get_sheet_styles(self, idx_or_name: int | str, n_rows: int | None = None) -> tuple[list[list[int]], dict[int, Style]]:
+        """Get style IDs and palette in a single call.
+
+        More efficient than calling `get_style_ids()` and `get_style_palette()`
+        separately, as it only parses the sheet XML once.
+
+        :param idx_or_name: The index (starting at 0) or the name of the sheet.
+        :param n_rows: Optional maximum number of rows to return.
+        :return: A tuple of (style_ids, palette).
+        """
+        return self._reader.get_sheet_styles(idx_or_name, n_rows)
 
     def get_layout(self, idx_or_name: int | str) -> SheetLayout:
         """Get the layout information (column widths, row heights) for the sheet.

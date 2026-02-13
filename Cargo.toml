@@ -1,6 +1,6 @@
 [package]
 name = "fastexcel"
-version = "0.20.6"
+version = "0.20.7"
 description = "A fast excel reader for Rust and Python"
 rust-version = "1.85.0"
 edition = "2024"
@@ -29,7 +29,7 @@ crate-type = ["cdylib", "rlib"]
 arrow-array = { version = "^57", features = ["ffi"], optional = true }
 arrow-pyarrow = { version = "^57", optional = true }
 arrow-schema = { version = "^57", optional = true }
-calamine = { git = "https://github.com/ddimaria/calamine", rev = "084d73be482debd73ac20fba49cd3f33b28f474a", features = ["chrono"] }
+calamine = { git = "https://github.com/michael-keye/calamine-keye", rev = "ab4ce3b", features = ["chrono"] }
 chrono = { version = "^0.4.43", default-features = false }
 log = "^0.4"
 polars-core = { version = ">=0.50", default-features = false, features = [

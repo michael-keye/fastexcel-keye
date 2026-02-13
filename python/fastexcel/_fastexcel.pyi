@@ -512,16 +512,18 @@ class _ExcelReader:
     def sheet_names(self) -> list[str]: ...
     def table_names(self, sheet_name: str | None = None) -> list[str]: ...
     def defined_names(self) -> list[DefinedName]: ...
-    def get_style_ids(self, idx_or_name: str | int) -> list[list[int]]:
+    def get_style_ids(self, idx_or_name: str | int, n_rows: int | None = None) -> list[list[int]]:
         """Get a 2D array of style IDs for each cell in the sheet.
 
         Use with `get_style_palette()` to look up the style for each cell.
         """
-    def get_style_palette(self, idx_or_name: str | int) -> dict[int, Style]:
+    def get_style_palette(self, idx_or_name: str | int, n_rows: int | None = None) -> dict[int, Style]:
         """Get a mapping of style ID to Style object for the sheet.
 
         Use with `get_style_ids()` to look up the style for each cell.
         """
+    def get_sheet_styles(self, idx_or_name: str | int, n_rows: int | None = None) -> tuple[list[list[int]], dict[int, Style]]:
+        """Get style IDs and palette in a single call."""
     def get_layout(self, idx_or_name: str | int) -> SheetLayout:
         """Get the layout information (column widths, row heights) for the sheet."""
     def get_merged_cells(self, idx_or_name: str | int) -> list[MergedCell]:

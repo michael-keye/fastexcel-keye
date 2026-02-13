@@ -250,7 +250,7 @@ checksum = "d71b6127be86fdcfddb610f7182ac57211d4b18a3e9c82eb2d17662f2227ad6a"
 [[package]]
 name = "calamine"
 version = "0.32.0"
-source = "git+https://github.com/ddimaria/calamine?rev=084d73be482debd73ac20fba49cd3f33b28f474a#084d73be482debd73ac20fba49cd3f33b28f474a"
+source = "git+https://github.com/michael-keye/calamine-keye?rev=ab4ce3b#ab4ce3b793a16bebef96f61a5e474cd2f1df9525"
 dependencies = [
  "atoi_simd",
  "byteorder",

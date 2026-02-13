@@ -320,26 +320,28 @@ impl ExcelReader {
     /// Get a 2D array of style IDs for each cell in the sheet.
     ///
     /// Use with `get_style_palette()` to look up the style for each cell.
-    #[pyo3(name = "get_style_ids")]
+    #[pyo3(name = "get_style_ids", signature = (idx_or_name, n_rows=None))]
     pub(crate) fn py_get_style_ids(
         &mut self,
         idx_or_name: &Bound<'_, PyAny>,
+        n_rows: Option<usize>,
     ) -> PyResult<Vec<Vec<u32>>> {
         let idx_or_name: IdxOrName = idx_or_name.try_into().into_pyresult()?;
-        let styles = self.get_sheet_styles(idx_or_name).into_pyresult()?;
+        let styles = self.get_sheet_styles(idx_or_name, n_rows).into_pyresult()?;
         Ok(styles.style_ids)
     }
 
     /// Get a mapping of style ID to Style object for the sheet.
     ///
     /// Use with `get_style_ids()` to look up the style for each cell.
-    #[pyo3(name = "get_style_palette")]
+    #[pyo3(name = "get_style_palette", signature = (idx_or_name, n_rows=None))]
     pub(crate) fn py_get_style_palette(
         &mut self,
         idx_or_name: &Bound<'_, PyAny>,
+        n_rows: Option<usize>,
     ) -> PyResult<HashMap<u32, Style>> {
         let idx_or_name: IdxOrName = idx_or_name.try_into().into_pyresult()?;
-        let styles = self.get_sheet_styles(idx_or_name).into_pyresult()?;
+        let styles = self.get_sheet_styles(idx_or_name, n_rows).into_pyresult()?;
         Ok(styles.palette)
     }
 
@@ -361,6 +363,18 @@ impl ExcelReader {
     ) -> PyResult<Vec<MergedCell>> {
         let idx_or_name: IdxOrName = idx_or_name.try_into().into_pyresult()?;
         self.get_merged_cells(idx_or_name).into_pyresult()
+    }
+
+    /// Get style IDs and palette in a single call (avoids double XML parse).
+    #[pyo3(name = "get_sheet_styles", signature = (idx_or_name, n_rows=None))]
+    pub(crate) fn py_get_sheet_styles(
+        &mut self,
+        idx_or_name: &Bound<'_, PyAny>,
+        n_rows: Option<usize>,
+    ) -> PyResult<(Vec<Vec<u32>>, HashMap<u32, Style>)> {
+        let idx_or_name: IdxOrName = idx_or_name.try_into().into_pyresult()?;
+        let styles = self.get_sheet_styles(idx_or_name, n_rows).into_pyresult()?;
+        Ok((styles.style_ids, styles.palette))
     }
 }
 
