@@ -64,7 +64,7 @@ Issues = "https://github.com/michael-keye/fastexcel-keye/issues"
 
 [tool.maturin]
 python-source = "python"
-module-name = "fastexcel._fastexcel"
+module-name = "fastexcel_keye._fastexcel"
 features = ["__maturin"]
 
 [tool.mypy]

@@ -4,7 +4,7 @@ import logging
 from datetime import date, datetime
 from typing import Any, Literal
 
-import fastexcel
+import fastexcel_keye as fastexcel
 import numpy as np
 import pandas as pd
 import polars as pl

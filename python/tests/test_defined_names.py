@@ -1,4 +1,4 @@
-import fastexcel
+import fastexcel_keye as fastexcel
 import pytest
 
 from .utils import path_for_fixture

@@ -1,4 +1,4 @@
-from fastexcel import read_excel
+from fastexcel_keye import read_excel
 from openpyxl import load_workbook
 from xlrd import open_workbook
 

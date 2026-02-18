@@ -1,6 +1,6 @@
 """Test that style_ids are padded to absolute coordinates (0-indexed from A1)."""
 
-import fastexcel
+import fastexcel_keye as fastexcel
 
 from .utils import path_for_fixture
 

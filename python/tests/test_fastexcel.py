@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-import fastexcel
+import fastexcel_keye as fastexcel
 import pandas as pd
 import polars as pl
 import pytest

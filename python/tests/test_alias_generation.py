@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import fastexcel
+import fastexcel_keye as fastexcel
 import pandas as pd
 import polars as pl
 import pytest

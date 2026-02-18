@@ -1,6 +1,6 @@
 """Tests for the Arrow PyCapsule Interface implementation."""
 
-import fastexcel
+import fastexcel_keye as fastexcel
 import pandas as pd
 import polars as pl
 

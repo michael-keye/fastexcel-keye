@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 
-import fastexcel
+import fastexcel_keye as fastexcel
 import numpy as np
 import pandas as pd
 import polars as pl
